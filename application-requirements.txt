@@ -40,4 +40,5 @@ Backend validation works.
 UI shows meaningful errors.
 State-machine integration tests pass.
 No secrets are committed.
+===================
 
