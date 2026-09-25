@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: ticketing-system-test
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+# Datasource properties are supplied at runtime by the Testcontainers PostgreSQL
+# module (via @DynamicPropertySource / @ServiceConnection) — no static values here.
+
+logging:
+  level:
+    org.testcontainers: INFO

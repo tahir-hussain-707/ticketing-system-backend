@@ -1,0 +1,321 @@
+openapi: 3.0.3
+info:
+  title: Ticket Ownership, Assignment, View Authorization & Scoped Listing API
+  version: "1.0"
+  description: >
+    Delta onto the existing tickets/comments contracts from 001-ticket-management-backend and
+    002-list-comments. EVERY endpoint below now requires an authenticated session (FR-006) — this
+    includes GET /tickets/{ticketId} and GET /tickets/{ticketId}/comments, which were open in
+    001/002 and stayed open in the original (pre-amendment) version of this feature; they are not
+    exceptions anymore. Those two also carry a row-level authorization check (FR-037): the
+    caller must be the ticket's creator, its assignee, or hold role SUPPORT/ADMIN.
+servers:
+  - url: /api/v1
+
+paths:
+  /tickets:
+    post:
+      summary: Create a ticket (auth required, FR-006; assignee never caller-supplied, FR-009)
+      operationId: createTicket
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TicketCreateRequest' }
+      responses:
+        '201':
+          description: Ticket created, status OPEN, auto-assigned per FR-010/FR-011/FR-012
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TicketResponse' }
+        '400':
+          description: Validation failure
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+        '401':
+          description: Not authenticated (FR-006)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+    get:
+      summary: List tickets with an ownership scope (FR-016, FR-017); auth required (FR-006)
+      operationId: listTickets
+      parameters:
+        - name: scope
+          in: query
+          required: false
+          description: >
+            `mine` (created by the caller), `assigned` (assigned to the caller), or `all` (every
+            ticket the caller is permitted to see — narrowed to `mine` for a GENERAL caller).
+            Default: `all`.
+          schema: { $ref: '#/components/schemas/TicketScope' }
+        - name: q
+          in: query
+          required: false
+          schema: { type: string }
+        - name: status
+          in: query
+          required: false
+          schema: { type: string }
+        - name: page
+          in: query
+          required: false
+          schema: { type: integer, minimum: 0, default: 0 }
+        - name: size
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: Page of tickets matching scope + filters
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TicketPage' }
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+
+  /tickets/{ticketId}:
+    get:
+      summary: >
+        Get ticket details (auth required, FR-006; creator/assignee/SUPPORT/ADMIN only, FR-037 —
+        previously open in 001, now gated both by authentication and by ownership)
+      operationId: getTicket
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TicketDetailResponse' }
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+        '403':
+          description: Authenticated but not the creator, assignee, or SUPPORT/ADMIN (FR-037)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+        '404':
+          description: Ticket not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+
+  /tickets/{ticketId}/assignee:
+    patch:
+      summary: Manually reassign a ticket — ADMIN only (FR-013)
+      operationId: reassignTicket
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReassignRequest' }
+      responses:
+        '200':
+          description: Reassigned
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TicketResponse' }
+        '400':
+          description: Target user is not a SUPPORT user
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+        '403':
+          description: Caller is not ADMIN (FR-013)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+        '404':
+          description: Ticket or target user not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+
+  /tickets/{ticketId}/comments:
+    get:
+      summary: >
+        List a ticket's comments (auth required, FR-006; same FR-037 view authorization as the
+        parent ticket — previously open in 002, now gated)
+      operationId: listComments
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: page
+          in: query
+          required: false
+          schema: { type: integer, minimum: 0, default: 0 }
+        - name: size
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CommentPage' }
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+        '403':
+          description: Authenticated but not the creator, assignee, or SUPPORT/ADMIN (FR-037)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+        '404':
+          description: Ticket not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+    post:
+      summary: Add a comment — creator or assignee only (FR-014); attributed by name (FR-015)
+      operationId: addComment
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CommentCreateRequest' }
+      responses:
+        '201':
+          description: Comment added
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CommentResponse' }
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+        '403':
+          description: Caller is neither the ticket's creator nor its assignee (FR-014)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+        '404':
+          description: Ticket not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+
+components:
+  schemas:
+    TicketScope:
+      type: string
+      enum: [mine, assigned, all]
+
+    UserSummary:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+
+    TicketCreateRequest:
+      type: object
+      required: [title, description]
+      properties:
+        title: { type: string, maxLength: 200 }
+        description: { type: string }
+        priority: { type: string, enum: [LOW, MEDIUM, HIGH, CRITICAL] }
+
+    ReassignRequest:
+      type: object
+      required: [assigneeId]
+      properties:
+        assigneeId: { type: string, format: uuid }
+
+    TicketResponse:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        description: { type: string }
+        priority: { type: string, enum: [LOW, MEDIUM, HIGH, CRITICAL] }
+        status: { type: string, enum: [OPEN, IN_PROGRESS, RESOLVED, CLOSED, CANCELLED] }
+        assignee:
+          allOf: [{ $ref: '#/components/schemas/UserSummary' }]
+          nullable: true
+        createdBy: { $ref: '#/components/schemas/UserSummary' }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    TicketDetailResponse:
+      allOf:
+        - $ref: '#/components/schemas/TicketResponse'
+        - type: object
+          properties:
+            comments:
+              type: array
+              items: { $ref: '#/components/schemas/CommentResponse' }
+
+    TicketPage:
+      type: object
+      properties:
+        content:
+          type: array
+          items: { $ref: '#/components/schemas/TicketResponse' }
+        page: { type: integer }
+        size: { type: integer }
+        totalElements: { type: integer }
+        totalPages: { type: integer }
+
+    CommentCreateRequest:
+      type: object
+      required: [content]
+      properties:
+        content: { type: string }
+
+    CommentResponse:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        ticketId: { type: string, format: uuid }
+        content: { type: string }
+        authorName: { type: string }
+        createdAt: { type: string, format: date-time }
+
+    CommentPage:
+      type: object
+      properties:
+        content:
+          type: array
+          items: { $ref: '#/components/schemas/CommentResponse' }
+        page: { type: integer }
+        size: { type: integer }
+        totalElements: { type: integer }
+        totalPages: { type: integer }
+
+    ApiError:
+      type: object
+      properties:
+        code: { type: string }
+        message: { type: string }
+        fieldErrors:
+          type: array
+          items:
+            type: object
+            properties:
+              field: { type: string }
+              message: { type: string }

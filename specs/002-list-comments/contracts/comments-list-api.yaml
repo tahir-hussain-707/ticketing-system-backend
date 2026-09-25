@@ -1,0 +1,84 @@
+openapi: 3.0.3
+info:
+  title: List Comments API
+  version: "1.0"
+  description: >
+    Adds a standalone, paginated way to retrieve a ticket's comments (feature
+    002-list-comments), extending the tickets API from
+    001-ticket-management-backend/contracts/tickets-api.yaml. Reuses that contract's
+    CommentResponse and ApiError schemas unchanged.
+servers:
+  - url: /api/v1
+
+paths:
+  /tickets/{ticketId}/comments:
+    parameters:
+      - name: ticketId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      summary: List a ticket's comments (FR-001, FR-002, FR-005)
+      operationId: listComments
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema: { type: integer, minimum: 0, default: 0 }
+        - name: size
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: >
+            Page of comments for the ticket, ordered oldest to newest. content is [] when the
+            ticket has no comments (FR-003) — that is not an error.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CommentPage' }
+        '404':
+          description: Ticket not found (FR-004)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+
+components:
+  schemas:
+    # Reused verbatim from 001-ticket-management-backend/contracts/tickets-api.yaml
+    CommentResponse:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        ticketId: { type: string, format: uuid }
+        content: { type: string }
+        createdAt: { type: string, format: date-time }
+
+    ApiError:
+      type: object
+      properties:
+        code:
+          type: string
+          enum: [VALIDATION_FAILED, TICKET_NOT_FOUND, INVALID_TRANSITION, TICKET_CONFLICT]
+        message: { type: string }
+        timestamp: { type: string, format: date-time }
+        path: { type: string }
+        fieldErrors:
+          type: array
+          items:
+            type: object
+            properties:
+              field: { type: string }
+              message: { type: string }
+
+    # New in this feature
+    CommentPage:
+      type: object
+      properties:
+        content:
+          type: array
+          items: { $ref: '#/components/schemas/CommentResponse' }
+        page: { type: integer }
+        size: { type: integer }
+        totalElements: { type: integer }
+        totalPages: { type: integer }

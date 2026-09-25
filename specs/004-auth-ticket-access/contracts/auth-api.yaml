@@ -1,0 +1,86 @@
+openapi: 3.0.3
+info:
+  title: Authentication API
+  version: "1.0"
+  description: >
+    New endpoints from feature 004-auth-ticket-access. Session-based: a successful login
+    establishes an HTTP session (cookie); logout invalidates it (FR-001, FR-003, FR-004, FR-017).
+servers:
+  - url: /api/v1
+
+paths:
+  /auth/login:
+    post:
+      summary: Log in with email and password (FR-001)
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '200':
+          description: Authenticated; a session cookie is set
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LoginResponse' }
+        '400':
+          description: Missing email or password (FR-004)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+        '401':
+          description: >
+            Incorrect password or unregistered email — same generic error either way (FR-003)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+
+  /auth/logout:
+    post:
+      summary: Log out, ending the current session (FR-017)
+      operationId: logout
+      responses:
+        '204':
+          description: Session ended
+        '401':
+          description: No authenticated session to end
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+
+components:
+  schemas:
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, format: password }
+
+    LoginResponse:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        email: { type: string, format: email }
+        role: { $ref: '#/components/schemas/UserRole' }
+
+    UserRole:
+      type: string
+      enum: [SUPPORT, GENERAL, ADMIN]
+
+    ApiError:
+      type: object
+      description: Same shape used by every endpoint in this service (constitution Principle I).
+      properties:
+        code: { type: string }
+        message: { type: string }
+        fieldErrors:
+          type: array
+          items:
+            type: object
+            properties:
+              field: { type: string }
+              message: { type: string }

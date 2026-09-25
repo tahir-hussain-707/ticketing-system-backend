@@ -1,0 +1,115 @@
+openapi: 3.0.3
+info:
+  title: RAG Resolution Chatbot API
+  version: "1.0"
+  description: >
+    All endpoints require an authenticated session (FR-006, FR-007). A conversation is either
+    named explicitly (continuing it) or omitted (starts, or resumes within 30 minutes of
+    inactivity per FR-036 — see research.md "Conversation model").
+servers:
+  - url: /api/v1
+
+paths:
+  /chatbot/messages:
+    post:
+      summary: Send a chatbot query, grounded in the resolved-ticket knowledge base
+      operationId: sendChatbotMessage
+      description: >
+        FR-021 (free-text query), FR-022 (reject blank), FR-023/024/025 (retrieve, ground, cite
+        sources), FR-028 (honest no-match), FR-033/034 (conversation context for follow-ups).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ChatbotQueryRequest' }
+      responses:
+        '200':
+          description: >
+            A grounded response (sourceTicketIds populated) or a no-match response
+            (sourceTicketIds empty, FR-028)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChatbotTurnResponse' }
+        '400':
+          description: Blank/empty query (FR-022)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+        '401':
+          description: Not authenticated (FR-007)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+        '404':
+          description: conversationId supplied but not found, not owned by the caller, or already
+            explicitly ended
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+        '503':
+          description: Embedding or response-generation service unavailable (FR-030)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+
+  /chatbot/conversations/{conversationId}/end:
+    post:
+      summary: Explicitly end a conversation (FR-036)
+      operationId: endConversation
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204':
+          description: Conversation ended
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+        '404':
+          description: Not found, not owned by the caller, or already ended
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+
+components:
+  schemas:
+    ChatbotQueryRequest:
+      type: object
+      required: [query]
+      properties:
+        query: { type: string, description: "Free-text issue description (FR-021)" }
+        conversationId:
+          type: string
+          format: uuid
+          nullable: true
+          description: >
+            Omit to start a new conversation, or resume the caller's own currently-open one
+            automatically (FR-036); supply to continue a specific conversation explicitly.
+
+    ChatbotTurnResponse:
+      type: object
+      properties:
+        conversationId: { type: string, format: uuid }
+        responseText: { type: string }
+        sourceTicketIds:
+          type: array
+          items: { type: string, format: uuid }
+          description: Empty when this turn is a no-match response (FR-028)
+        confidentMatch: { type: boolean }
+
+    ApiError:
+      type: object
+      properties:
+        code: { type: string }
+        message: { type: string }
+        fieldErrors:
+          type: array
+          items:
+            type: object
+            properties:
+              field: { type: string }
+              message: { type: string }

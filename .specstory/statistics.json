@@ -1,0 +1,58 @@
+{
+  "sessions": {
+    "027aa7d3-3e3e-4f27-a385-f9467135d75a": {
+      "user_message_count": 3,
+      "agent_message_count": 17,
+      "start_timestamp": "2026-09-24T09:40:31.266Z",
+      "end_timestamp": "2026-09-24T09:43:36.423Z",
+      "markdown_size_bytes": 17480,
+      "provider": "claude",
+      "last_updated": "2026-09-24T09:48:22Z"
+    },
+    "189fd86e-2c46-41b2-afc5-caafaa69995f": {
+      "user_message_count": 43,
+      "agent_message_count": 589,
+      "start_timestamp": "2026-09-20T12:57:38.904Z",
+      "end_timestamp": "2026-09-21T11:00:33.044Z",
+      "markdown_size_bytes": 888379,
+      "provider": "claude",
+      "last_updated": "2026-09-24T09:48:22Z"
+    },
+    "2878248b-19ee-4023-a707-5acfd3490d2a": {
+      "user_message_count": 22,
+      "agent_message_count": 297,
+      "start_timestamp": "2026-09-25T03:58:37.315Z",
+      "end_timestamp": "2026-09-25T14:34:20.855Z",
+      "markdown_size_bytes": 620823,
+      "provider": "claude",
+      "last_updated": "2026-09-25T14:34:21Z"
+    },
+    "3d873c97-fa86-4a6a-90bb-1f29ba1257b5": {
+      "user_message_count": 18,
+      "agent_message_count": 91,
+      "start_timestamp": "2026-09-24T09:50:57.068Z",
+      "end_timestamp": "2026-09-24T10:45:36.191Z",
+      "markdown_size_bytes": 284876,
+      "provider": "claude",
+      "last_updated": "2026-09-25T03:46:37Z"
+    },
+    "7a2798bb-bba7-40e4-a658-7f488ec37e77": {
+      "user_message_count": 42,
+      "agent_message_count": 741,
+      "start_timestamp": "2026-09-22T09:16:47.539Z",
+      "end_timestamp": "2026-09-24T07:46:56.104Z",
+      "markdown_size_bytes": 1270826,
+      "provider": "claude",
+      "last_updated": "2026-09-24T09:48:22Z"
+    },
+    "d8b1f2d0-d1ee-483e-843b-6dcc9aa75f3d": {
+      "user_message_count": 3,
+      "agent_message_count": 0,
+      "start_timestamp": "2026-09-24T09:49:46.902Z",
+      "end_timestamp": "2026-09-24T09:48:58.297Z",
+      "markdown_size_bytes": 770,
+      "provider": "claude",
+      "last_updated": "2026-09-24T09:50:00Z"
+    }
+  }
+}
