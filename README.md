@@ -76,7 +76,21 @@ No local Maven install is required — use the committed wrapper (`./mvnw`).
    curl -s localhost:8080/actuator/health
    ```
 
-5. API docs (Swagger UI): `http://localhost:8080/swagger-ui.html`
+5. Create some test users:
+
+   ```sql
+   INSERT INTO users (id, name, email, password_hash, role, created_at, updated_at)
+    VALUES
+      ('29c335a4-01a4-4f4a-885e-67c0dc1fb5a7', 'AdminUser',   'admin@tsystem.com',
+       '$2b$10$tnZLE77GFY/J6rG.C8G5MeMox3isNKOi7CIobDHEJYT9MnKo71K8K', 'ADMIN',   now(), now()),
+      ('de139255-ce92-445c-8833-d04684bc9340', 'SupportUser', 'support@tsystem.com',
+       '$2b$10$tnZLE77GFY/J6rG.C8G5MeMox3isNKOi7CIobDHEJYT9MnKo71K8K', 'SUPPORT', now(), now()),
+      ('e2e0b731-7254-4508-afb2-3fb4c9d1ed45', 'GeneralUser',   'generalt@tsystem.com',
+       '$2b$10$tnZLE77GFY/J6rG.C8G5MeMox3isNKOi7CIobDHEJYT9MnKo71K8K', 'GENERAL', now(), now())
+    ON CONFLICT (LOWER(email)) DO NOTHING;
+   ```
+
+6. API docs (Swagger UI): `http://localhost:8080/swagger-ui.html`
 
 See [`specs/005-auth-rag-chatbot/quickstart.md`](specs/005-auth-rag-chatbot/quickstart.md) for a
 full curl walkthrough of every user story, including login, ticket creation/assignment,
